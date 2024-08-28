@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Calendar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #menu {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        #menu button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #menu button.active {
+            background-color: #0056b3;
+        }
+
+        #calendar-section, #upload-section, #files-section {
+            display: none;
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #calendar-section.active, #upload-section.active, #files-section.active {
+            display: block;
+        }
+
+        #calendar {
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+        }
+
+        #note-form {
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .file-list a {
+            display: block;
+            margin: 5px 0;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .file-list a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Simple Calendar</h1>
+
+    <div id="menu">
+        <button id="calendar-button" class="active">View Calendar</button>
+        <button id="upload-button">Upload File</button>
+        <button id="files-button">Uploaded Files</button>
+    </div>
+
+    <!-- Calendar Section -->
+    <div id="calendar-section" class="active">
+        <div id="calendar">
+            <!-- Calendar will be displayed here -->
+        </div>
+
+        <div id="note-form">
+            <h2>Add a Note</h2>
+            <input type="number" id="day" placeholder="Day (e.g., 14)" min="1" max="31">
+            <input type="text" id="note" placeholder="Note (e.g., Meeting with John)">
+            <button id="add-note">Add Note</button>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div id="upload-section">
+        <h2>Upload Some File</h2>
+        <form id="upload-form">
+            <input type="file" id="file-upload">
+            <button type="submit">Upload File</button>
+        </form>
+    </div>
+
+    <!-- Files Section -->
+    <div id="files-section">
+        <h2>Uploaded Files</h2>
+        <div id="file-list" class="file-list">
+            <!-- Uploaded files will be listed here -->
+        </div>
+    </div>
+
+    <script>
+        // Navigation between sections
+        const calendarButton = document.getElementById('calendar-button');
+        const uploadButton = document.getElementById('upload-button');
+        const filesButton = document.getElementById('files-button');
+        const calendarSection = document.getElementById('calendar-section');
+        const uploadSection = document.getElementById('upload-section');
+        const filesSection = document.getElementById('files-section');
+
+        calendarButton.addEventListener('click', () => {
+            calendarSection.classList.add('active');
+            uploadSection.classList.remove('active');
+            filesSection.classList.remove('active');
+            calendarButton.classList.add('active');
+            uploadButton.classList.remove('active');
+            filesButton.classList.remove('active');
+        });
+
+        uploadButton.addEventListener('click', () => {
+            uploadSection.classList.add('active');
+            calendarSection.classList.remove('active');
+            filesSection.classList.remove('active');
+            uploadButton.classList.add('active');
+            calendarButton.classList.remove('active');
+            filesButton.classList.remove('active');
+        });
+
+        filesButton.addEventListener('click', () => {
+            filesSection.classList.add('active');
+            calendarSection.classList.remove('active');
+            uploadSection.classList.remove('active');
+            filesButton.classList.add('active');
+            calendarButton.classList.remove('active');
+            uploadButton.classList.remove('active');
+            loadFiles(); // Load the list of files
+        });
+
+        // Function to fetch and display the calendar
+        function fetchCalendar(year, month) {
+            fetch(`/calendar?year=${year}&month=${month}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('calendar').innerText = data.calendar;
+                });
+        }
+
+        // Function to add a note to a specific date
+        function addNote() {
+            const day = document.getElementById('day').value;
+            const note = document.getElementById('note').value;
+            const year = new Date().getFullYear();
+            const month = new Date().getMonth() + 1;
+
+            fetch('/calendar/note', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    year: year,
+                    month: month,
+                    day: parseInt(day),
+                    note: note
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                fetchCalendar(year, month); // Refresh the calendar
+            });
+        }
+
+        // Function to handle file upload
+        document.getElementById('upload-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const fileInput = document.getElementById('file-upload');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/calendar/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                fileInput.value = ''; // Clear the file input
+            });
+        });
+
+        // Function to load and display uploaded files
+        function loadFiles() {
+            fetch('/files')
+                .then(response => response.json())
+                .then(data => {
+                    const fileList = document.getElementById('file-list');
+                    fileList.innerHTML = ''; // Clear previous file list
+                    data.files.forEach(file => {
+                        const link = document.createElement('a');
+                        link.href = `/files/${file}`;
+                        link.textContent = file;
+                        link.target = '_blank';
+                        fileList.appendChild(link);
+                    });
+                });
+        }
+
+        // Load the current month's calendar on page load
+        window.onload = function() {
+            const year = new Date().getFullYear();
+            const month = new Date().getMonth() + 1;
+            fetchCalendar(year, month);
+        }
+
+        // Add event listener to the "Add Note" button
+        document.getElementById('add-note').addEventListener('click', addNote);
+    </script>
+
+</body>
+</html>
+
