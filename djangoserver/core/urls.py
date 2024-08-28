@@ -20,4 +20,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     #path('cal/', include('calenda.urls')),
+    path('', include('dashboard.urls')), # This is the route to the visual part of the site
+
+    # darkmode_dashboard/urls.py
 ]
